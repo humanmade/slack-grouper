@@ -22,7 +22,7 @@
     "url": "https://github.com/johnagan/serverless-slack-app/issues"
   },
   "dependencies": {
-    "serverless-slack": "^1.0.25"
+    "serverless-slack": "roborourke/serverless-slack"
   },
   "devDependencies": {
     "eslint": "^3.18.0",

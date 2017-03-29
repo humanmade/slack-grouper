@@ -22,7 +22,8 @@ slack.on('/group-create', (msg, bot) => {
       handle: handle[1].trim(),
       channels: msg.channel_id
     })
-    .then(data => bot.reply({
+    .then(data => slack.callback({
+      response_type: 'in_channel',
       text: `😎 *@${data.usergroup.handle}* is good to go. Type \`/group-subscribe @${data.usergroup.handle}\` to join`
     }) )
     .catch(err => err.error ? bot.replyPrivate({
@@ -47,8 +48,9 @@ slack.on('/group-subscribe', (msg, bot) => {
       usergroup: usergroup[1],
       users: data.users.reduce((users, user) => `${users},${user}`, msg.user_id)
     }))
-    .then(() => bot.reply({
-      text: `One of us, one of us, one of us 🙌🤘🎉`
+    .then(() => slack.callback({
+      response_type: 'in_channel',
+      text: `One of us! One of us! One of us! 🙌🤘🎉`
     }) )
     .catch(err => err.error ? bot.replyPrivate({
       text: `Uh oh - something went wrong: ${err.error}`
