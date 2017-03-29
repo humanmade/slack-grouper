@@ -1,62 +1,28 @@
-#      _____                          _               
-#     / ____|                        | |              
-#    | (___   ___ _ ____   _____ _ __| | ___  ___ ___ 
-#     \___ \ / _ \ '__\ \ / / _ \ '__| |/ _ \/ __/ __|
-#     ____) |  __/ |   \ V /  __/ |  | |  __/\__ \__ \
-#    |_____/ \___|_|    \_/ \___|_|  |_|\___||___/___/
-#      _____ _               
-#     / ____| |          | |                          
-#    | (___ | | __ _  ___| | __                       
-#     \___ \| |/ _` |/ __| |/ /                       
-#     ____) | | (_| | (__|   <                        
-#    |_____/|_|\__,_|\___|_|\_\                       
-#                               
-#
-#
-# This file is the main config file for your bot.
-# You can always add more config options for more control.
-#
-# For full config options, check the docs:
-#    docs.serverless.com
-#
-# Happy Coding!
+# Grouper App
 
+service: grouper
 
-service: serverless-slack
+plugins:
+  - serverless-secrets-plugin
 
 custom:
-  # Log all events to CloudWatch
+  secrets: ${file(secrets.${opt:stage, self:provider.stage}.yml)}
   slack_enable_logging: true
-
-  # The dynamodb table to store OAuth access data
-  slack_table_name: Teams
-
-  # The path used to post Slack events to
+  slack_table_name: GrouperTeams
   slack_event_path: slack
-
-  # The path used to install the Slack App
   slack_install_path: slack
-
-  # The path to redirect to after an install
   slack_install_redirect: https://slack.com
-
-  # Verification token
-  slack_verification_token: "xxxxxxxxxxxxx"            
-  
-  # Space delimited scopes
-  slack_client_scopes: "bot commands incoming-webhook"
-  
-  # Client ID - quotes required
-  slack_client_id: "xxxxxxxxxx.xxxxxxxxxxxx"
-  
-  # Client Secret - quotes required
-  slack_client_secret: "xxxxxxxxxxxxxxxxxx"
-  
+  slack_verification_token: ${self:custom.secrets.SLACK_VTOKEN}
+  slack_client_scopes: "commands usergroups:read usergroups:write"
+  slack_client_id: ${self:custom.secrets.SLACK_CLIENT}
+  slack_client_secret: ${self:custom.secrets.SLACK_SECRET}
 
 provider:
   name: aws
-  runtime: nodejs4.3
+  region: eu-west-1
+  runtime: nodejs6.10
   profile: serverless
+  stage: dev
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -67,7 +33,7 @@ provider:
         - dynamodb:PutItem
         - dynamodb:UpdateItem
         - dynamodb:DeleteItem
-      Resource: "arn:aws:dynamodb:us-east-1:*:*"
+      Resource: "arn:aws:dynamodb:${self:provider.region}:*:*"
   environment:
     TABLE_NAME: ${self:custom.slack_table_name}
     CLIENT_ID: ${self:custom.slack_client_id}
@@ -81,6 +47,7 @@ provider:
 functions:
   slack:
     handler: src/index.handler
+    memory: 128
     events:
       ## Slash Commands, Events, and Interactive Messages
       - http:
@@ -89,8 +56,8 @@ functions:
           integration: lambda
           response:
             template: $input.path('$')
-      
-      ## OAuth Routes      
+
+      ## OAuth Routes
       - http:
           path: ${self:custom.slack_install_path}
           method: get
@@ -108,7 +75,7 @@ functions:
                 pattern: http.*
                 headers:
                   Location: integration.response.body.errorMessage
-                  Cache-Control: "'no-cache, no-store, must-revalidate'"      
+                  Cache-Control: "'no-cache, no-store, must-revalidate'"
 
 
 resources:
