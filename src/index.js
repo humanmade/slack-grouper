@@ -97,7 +97,7 @@ slack.on('/group-list', (msg, bot) => {
       attachments: [
         {
           title: 'Available user groups',
-          color: '#c93c3c',
+          color: '#5abce0',
           mrkdwn_in: ['fields'],
           fields: data.usergroups.map(group => ({
             title: `${group.name}`,
