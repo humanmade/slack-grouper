@@ -47,7 +47,7 @@ slack.on('/group-subscribe', (msg, bot) => {
       usergroup: usergroup[1],
       users: data.users.reduce((users, user) => `${users},${user}`, msg.user_id)
     }))
-    .then(() => bot.replyPrivate({
+    .then(() => bot.reply({
       text: `One of us, one of us, one of us 🙌🤘🎉`
     }) )
     .catch(err => err.error ? bot.replyPrivate({
