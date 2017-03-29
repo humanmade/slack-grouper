@@ -84,7 +84,7 @@ slack.on('/group-unsubscribe', (msg, bot) => {
       })
     } )
     .then(() => bot.replyPrivate({
-      text: `Well that's just fine then 😒`
+      text: `👋 Unsubscribed! We'll try not to take it personally`
     }) )
     .catch(err => err.error ? bot.replyPrivate({
       text: `Uh oh - something went wrong: ${err.error}`

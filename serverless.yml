@@ -47,7 +47,7 @@ provider:
 functions:
   slack:
     handler: src/index.handler
-    memorySize: 128
+    memorySize: 256
     events:
       ## Slash Commands, Events, and Interactive Messages
       - http:
