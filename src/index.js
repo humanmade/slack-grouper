@@ -92,20 +92,25 @@ slack.on('/group-unsubscribe', (msg, bot) => {
 })
 
 slack.on('/group-list', (msg, bot) => {
+
+  let search = msg.text.trim()
+
   return bot.send('usergroups.list', {
       include_count: true
     })
     .then(data => bot.replyPrivate({
       attachments: [
         {
-          title: 'Available user groups',
+          title: `👥 Available user groups ${search ? `matching “${search}”` : ''}`,
           color: '#5abce0',
           mrkdwn_in: ['fields'],
-          fields: data.usergroups.map(group => ({
-            title: `${group.name}`,
-            value: `@${group.handle}: ${group.user_count} users`,
-            short: true
-          }))
+          fields: data.usergroups
+            .filter(group => ! search || group.name.includes(search) || group.handle.includes(search))
+            .map(group => ({
+              title: `${group.name}`,
+              value: `@${group.handle}: ${group.user_count} users`,
+              short: true
+            })) || [ { title: `No results found`, value: `Try something less specific, it's a pretty dumb search` } ]
         }
       ]
     }) )
