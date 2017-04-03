@@ -13,7 +13,7 @@ custom:
   slack_install_path: slack
   slack_install_redirect: https://slack.com
   slack_verification_token: ${self:custom.secrets.SLACK_VTOKEN}
-  slack_client_scopes: "commands usergroups:read usergroups:write"
+  slack_client_scopes: "commands chat:write:bot usergroups:read usergroups:write"
   slack_client_id: ${self:custom.secrets.SLACK_CLIENT}
   slack_client_secret: ${self:custom.secrets.SLACK_SECRET}
 

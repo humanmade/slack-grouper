@@ -6,14 +6,15 @@ const slack = require('serverless-slack')
 // The function that AWS Lambda will call
 exports.handler = slack.handler.bind(slack)
 
+// create a group
 slack.on('/group-create', (msg, bot) => {
 
-  let handle   = msg.text.match(/@([A-Za-z0-9_-]+)/)
+  let handle   = msg.text.match(/@([A-Z0-9_-]+)/)
   let name     = msg.text.match(/\s([^#@][^#@]+)/)
 
   if ( ! handle ) {
     return bot.replyPrivate({
-      text: '🤦‍♀️ You need to provide at minimum the group handle eg. `/group-create @group`'
+      text: '🤦‍ You need to provide at minimum the group handle eg. `/group-create @group`'
     });
   }
 
@@ -31,13 +32,117 @@ slack.on('/group-create', (msg, bot) => {
     }) : null )
 })
 
-slack.on('/group-subscribe', (msg, bot) => {
+// invite people to a group
+slack.on('/group-invite', (msg, bot) => {
 
-  let usergroup = msg.text.match(/subteam\^([A-Za-z0-9_-]+)/)
+  let usergroup = msg.text.match(/subteam\^([A-Z0-9_-]+)(?:\|(@[A-Za-z0-9\._-]+))?/)
 
   if ( ! usergroup ) {
     return bot.replyPrivate({
-      text: '🤦‍♀️ You need to provide at minimum the group handle eg. `/group-subscribe @group`'
+      text: '🤦‍ You need to provide the group handle and usernames eg. `/group-invite @group @vic @bob`'
+    })
+  }
+
+  let users = msg.text.match(/<@(U[A-Z0-9_-]+)(?:\|([A-Za-z0-9_-]+))?>/g)
+
+  if ( ! users ) {
+    return bot.replyPrivate({
+      text: '🤦‍ You need to provide some usernames to invite to the group eg. `/group-invite @group @vic @bob`'
+    })
+  }
+
+  bot.replyPrivate({
+    text: `Ok, sending the invites out. Now we play the waiting game... ⏰`
+  })
+
+  return users.forEach(user => {
+    // let user_id   = user.match(/@(U[A-Za-z0-9\._-]+)/)[1]
+    let user_name = user.match(/\|([A-Za-z0-9\._-]+)>/)[1]
+
+    return bot
+      .send('chat.postMessage', {
+        channel: `@${user_name}`,
+        as_user: false,
+        text: `Hey, <@${msg.user_id}> has invited you to join <!subteam^${usergroup[1]}> 👯`,
+        attachments: [
+          {
+            attachment_type: 'default',
+            callback_id: 'grouper_invite',
+            fallback: `Group invite opt-in not supported - use "/group-subscribe ${usergroup[2]}" to join`,
+            actions: [
+              {
+                name: msg.user_name,
+                text: '👍 Sign me up',
+                type: 'button',
+                value: usergroup[1],
+                style: 'primary'
+              },
+              {
+                name: msg.user_name,
+                text: `👎 I’m good thanks`,
+                type: 'button',
+                value: 'false'
+              }
+            ]
+          }
+        ]
+      })
+      .catch(err => err.error ? bot.replyPrivate({
+        text: `Uh oh - something went wrong: ${err.error}`
+      }) : null )
+  })
+})
+
+// im response actions
+slack.on('grouper_invite', (msg, bot) => {
+  console.log(msg)
+
+  let user      = msg.actions[0].name
+  let usergroup = JSON.parse(msg.actions[0].value) // convert 'false' to bool
+
+  // was a nope
+  if ( ! usergroup ) {
+    // notify inviter
+    bot.send('chat.postMessage', {
+      channel: `@${user}`,
+      text: `Sad times 😢, <@${msg.user.id}> declined your invitation to join <!subteam^${usergroup}>`
+    })
+    // acknowledge action
+    return slack.callback({
+      text: `Ok, the invitation from @${user} to join <!subteam^${usergroup}> has been declined`
+    })
+  }
+
+  // notify inviter
+  bot.send('chat.postMessage', {
+    channel: `@${user}`,
+    text: `Whoop ☺️, <@${msg.user.id}> accepted your invitation to join <!subteam^${usergroup}>!`
+  })
+
+  // subscribe user & acknowledge
+  return bot.send('usergroups.users.list', {
+      usergroup
+    })
+    .then(data => bot.send('usergroups.users.update', {
+      usergroup,
+      users: data.users.reduce((users, user) => `${users},${user}`, msg.user_id)
+    }))
+    .then(() => slack.callback({
+      text: `Ace, you're now a member of <!subteam^${usergroup}>! 🤗`
+    }))
+    .catch(err => err.error ? bot.replyPrivate({
+      text: `Uh oh - something went wrong: ${err.error}`
+    }) : null )
+})
+
+// join a group
+slack.on('/group-subscribe', (msg, bot) => {
+
+  let usergroup = msg.text.match(/subteam\^([A-Z0-9_-]+)/)
+
+  if ( ! usergroup ) {
+    return bot.replyPrivate({
+      text: '🤦‍ You need to provide at minimum the group handle eg. `/group-subscribe @group`'
     })
   }
 
@@ -57,13 +162,14 @@ slack.on('/group-subscribe', (msg, bot) => {
     }) : null )
 })
 
+// leave a group
 slack.on('/group-unsubscribe', (msg, bot) => {
 
-  let usergroup = msg.text.match(/subteam\^([A-Za-z0-9_-]+)/)
+  let usergroup = msg.text.match(/subteam\^([A-Z0-9_-]+)/)
 
   if ( ! usergroup ) {
     return bot.replyPrivate({
-      text: '🤦‍♀️ You need to provide at minimum the group handle eg. `/group-unsubscribe @group`'
+      text: '🤦‍ You need to provide at minimum the group handle eg. `/group-unsubscribe @group`'
     })
   }
 
@@ -91,29 +197,78 @@ slack.on('/group-unsubscribe', (msg, bot) => {
     }) : null )
 })
 
+// list all groups
+// list users in a group
+// list a users groups
 slack.on('/group-list', (msg, bot) => {
 
   let search = msg.text.trim()
 
   return bot.send('usergroups.list', {
-      include_count: true
+      include_count: true,
+      include_users: true,
     })
-    .then(data => bot.replyPrivate({
-      attachments: [
-        {
-          title: `👥 Available user groups ${search ? `matching “${search}”` : ''}`,
-          color: '#5abce0',
-          mrkdwn_in: ['fields'],
-          fields: data.usergroups
-            .filter(group => ! search || group.name.includes(search) || group.handle.includes(search))
-            .map(group => ({
-              title: `${group.name}`,
-              value: `@${group.handle}: ${group.user_count} users`,
-              short: true
-            })) || [ { title: `No results found`, value: `Try something less specific, it's a pretty dumb search` } ]
+    .then(data => {
+
+      let usergroups = data.usergroups
+      let usergroup  = search.match(/subteam\^([A-Z0-9_-]+)/)
+      let user       = search.match(/@(U[A-Z0-9_-]+)/)
+      let title      = `👥 Available user groups`
+      let fields     = [ {
+        title: `No results found`,
+        value: `Try something less specific, it's a pretty dumb search`
+      } ]
+
+      if ( usergroup ) {
+        // @ links for the users in the matched group
+        return {
+          attachments: [
+            {
+              title: `👥 Users in ${search}`,
+              color: '#5abce0',
+              mrkdwn_in: ['fields'],
+              fields: usergroups
+                .filter(group => group.id === usergroup[1])
+                .reduce((cur, group) => group.users, [])
+                .map(user => ({
+                  value: `<@${user}>`,
+                  short: true
+                }))
+            }
+          ]
         }
-      ]
-    }) )
+      } else if ( user ) {
+        // show groups for user
+        title      = `👥 ${search}’s groups`
+        usergroups = usergroups.filter(group => group.users.includes(user[1]))
+      } else if ( search ) {
+        // regular text search
+        title      = `👥 User groups matching “${search}”`
+        usergroups = usergroups.filter(group => ! search || group.name.includes(search) || group.handle.includes(search))
+      }
+
+      // Map fields if we have results
+      if ( usergroups.length ) {
+        fields = usergroups
+          .map(group => ({
+            title: `${group.name}`,
+            value: `@${group.handle}: ${group.user_count} users`,
+            short: true
+          }))
+      }
+
+      return {
+        attachments: [
+          {
+            title,
+            color: '#5abce0',
+            mrkdwn_in: ['fields'],
+            fields
+          }
+        ]
+      }
+    } )
+    .then(data => bot.replyPrivate(data))
     .catch(err => err.error ? bot.replyPrivate({
       text: `Uh oh - something went wrong: ${err.error}`
     }) : null )
