@@ -59,64 +59,67 @@ slack.on('/group-invite', (msg, bot) => {
     // let user_id   = user.match(/@(U[A-Za-z0-9\._-]+)/)[1]
     let user_name = user.match(/\|([A-Za-z0-9\._-]+)>/)[1]
 
-    return bot
-      .send('chat.postMessage', {
-        channel: `@${user_name}`,
-        as_user: false,
-        text: `Hey, <@${msg.user_id}> has invited you to join <!subteam^${usergroup[1]}> 👯`,
-        attachments: [
-          {
-            attachment_type: 'default',
-            callback_id: 'grouper_invite',
-            fallback: `Group invite opt-in not supported - use "/group-subscribe ${usergroup[2]}" to join`,
-            actions: [
-              {
-                name: msg.user_name,
-                text: '👍 Sign me up',
-                type: 'button',
-                value: usergroup[1],
-                style: 'primary'
-              },
-              {
-                name: msg.user_name,
-                text: `👎 I’m good thanks`,
-                type: 'button',
-                value: 'false'
-              }
-            ]
-          }
-        ]
-      })
-      .catch(err => err.error ? bot.replyPrivate({
-        text: `Uh oh - something went wrong: ${err.error}`
-      }) : null )
+    bot.send({
+      channel: `@${user_name}`,
+      text: `Hey, <@${msg.user_id}> has invited you to join <!subteam^${usergroup[1]}> 👯`,
+      attachments: [
+        {
+          attachment_type: 'default',
+          callback_id: 'grouper_invite',
+          fallback: `Group invite opt-in not supported - use "/group-subscribe ${usergroup[2]}" to join`,
+          actions: [
+            {
+              name: msg.user_name,
+              text: `👍 Sign me up`,
+              type: 'button',
+              value: `${usergroup[1]}|true`,
+              style: 'primary'
+            },
+            {
+              name: msg.user_name,
+              text: `👎 I’m good thanks`,
+              type: 'button',
+              value: `${usergroup[1]}|false`
+            }
+          ]
+        }
+      ]
+    })
+    .catch(err => err.error ? bot.replyPrivate({
+      text: `Uh oh - something went wrong: ${err.error}`
+    }) : null )
   })
 })
 
 // im response actions
 slack.on('grouper_invite', (msg, bot) => {
-  console.log(msg)
 
   let user      = msg.actions[0].name
-  let usergroup = JSON.parse(msg.actions[0].value) // convert 'false' to bool
+  let value     = msg.actions[0].value.split('|')
+  let usergroup = value[0]
+  let yes       = JSON.parse(value[1])
 
   // was a nope
-  if ( ! usergroup ) {
+  if ( ! yes ) {
     // notify inviter
-    bot.send('chat.postMessage', {
+    bot.say({
       channel: `@${user}`,
-      text: `Sad times 😢, <@${msg.user.id}> declined your invitation to join <!subteam^${usergroup}>`
+      text: `Sad times, <@${msg.user.id}> declined your invitation to join <!subteam^${usergroup}> 😳`
     })
+
     // acknowledge action
-    return slack.callback({
-      text: `Ok, the invitation from @${user} to join <!subteam^${usergroup}> has been declined`
-    })
+    return bot.reply({
+        text: `The invitation from @${user} to join <!subteam^${usergroup}> has been declined`
+      })
+      .catch(err => err.error ? bot.replyPrivate({
+        text: `Uh oh - something went wrong: ${err.error}`
+      }) : null )
   }
 
   // notify inviter
-  bot.send('chat.postMessage', {
+  bot.say({
     channel: `@${user}`,
-    text: `Whoop ☺️, <@${msg.user.id}> accepted your invitation to join <!subteam^${usergroup}>!`
+    text: `Whoop, <@${msg.user.id}> accepted your invitation to join <!subteam^${usergroup}>! ☺️`
   })
 
   // subscribe user & acknowledge
@@ -127,7 +130,7 @@ slack.on('grouper_invite', (msg, bot) => {
       usergroup,
       users: data.users.reduce((users, user) => `${users},${user}`, msg.user_id)
     }))
-    .then(() => slack.callback({
+    .then(() => bot.reply({
       text: `Ace, you're now a member of <!subteam^${usergroup}>! 🤗`
     }))
     .catch(err => err.error ? bot.replyPrivate({
