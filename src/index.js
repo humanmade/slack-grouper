@@ -59,7 +59,7 @@ slack.on('/group-invite', (msg, bot) => {
     // let user_id   = user.match(/@(U[A-Za-z0-9\._-]+)/)[1]
     let user_name = user.match(/\|([A-Za-z0-9\._-]+)>/)[1]
 
-    bot.send({
+    bot.say({
       channel: `@${user_name}`,
       text: `Hey, <@${msg.user_id}> has invited you to join <!subteam^${usergroup[1]}> 👯`,
       attachments: [
