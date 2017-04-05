@@ -69,14 +69,14 @@ slack.on('/group-invite', (msg, bot) => {
           fallback: `Group invite opt-in not supported - use "/group-subscribe ${usergroup[2]}" to join`,
           actions: [
             {
-              name: msg.user_name,
+              name: `${msg.user_id}|${msg.user_name}`,
               text: `👍 Sign me up`,
               type: 'button',
               value: `${usergroup[1]}|true`,
               style: 'primary'
             },
             {
-              name: msg.user_name,
+              name: `${msg.user_id}|${msg.user_name}`,
               text: `👎 I’m good thanks`,
               type: 'button',
               value: `${usergroup[1]}|false`
@@ -94,22 +94,20 @@ slack.on('/group-invite', (msg, bot) => {
 // im response actions
 slack.on('grouper_invite', (msg, bot) => {
 
-  let user      = msg.actions[0].name
-  let value     = msg.actions[0].value.split('|')
-  let usergroup = value[0]
-  let yes       = JSON.parse(value[1])
+  let [user_id, user_name] = msg.actions[0].name.split('|')
+  let [usergroup, yes]     = msg.actions[0].value.split('|')
 
   // was a nope
-  if ( ! yes ) {
+  if ( ! JSON.parse(yes) ) {
     // notify inviter
     bot.say({
-      channel: `@${user}`,
+      channel: `@${user_name}`,
       text: `Sad times, <@${msg.user.id}> declined your invitation to join <!subteam^${usergroup}> 😳`
     })
 
     // acknowledge action
     return bot.reply({
-        text: `The invitation from @${user} to join <!subteam^${usergroup}> has been declined`
+        text: `Invitation from <@${user_id}> to join <!subteam^${usergroup}> has been noped 🙅`
       })
       .catch(err => err.error ? bot.replyPrivate({
         text: `Uh oh - something went wrong: ${err.error}`
@@ -118,7 +116,7 @@ slack.on('grouper_invite', (msg, bot) => {
 
   // notify inviter
   bot.say({
-    channel: `@${user}`,
+    channel: `@${user_name}`,
     text: `Whoop, <@${msg.user.id}> accepted your invitation to join <!subteam^${usergroup}>! ☺️`
   })
 
@@ -128,7 +126,7 @@ slack.on('grouper_invite', (msg, bot) => {
     })
     .then(data => bot.send('usergroups.users.update', {
       usergroup,
-      users: data.users.reduce((users, user) => `${users},${user}`, msg.user_id)
+      users: data.users.reduce((users, user) => `${users},${user}`, msg.user.id)
     }))
     .then(() => bot.reply({
       text: `Ace, you're now a member of <!subteam^${usergroup}>! 🤗`
