@@ -27,9 +27,16 @@ slack.on('/group-create', (msg, bot) => {
       response_type: 'in_channel',
       text: `😎 *@${data.usergroup.handle}* is good to go. Type \`/group-subscribe @${data.usergroup.handle}\` to join`
     }) )
-    .catch(err => err.error ? bot.replyPrivate({
-      text: `Uh oh - something went wrong: ${err.error}`
-    }) : null )
+    .catch(err => {
+      if ( err.error && err.error.includes('already_exists') ) {
+        return bot.replyPrivate({
+          text: `That group already exists! Join it using \`/group-subscribe @${handle[1]}\``
+        })
+      }
+      return err.error ? bot.replyPrivate({
+        text: `Uh oh - something went wrong: ${err.error}`
+      }) : null
+    })
 })
 
 // invite people to a group
@@ -56,7 +63,6 @@ slack.on('/group-invite', (msg, bot) => {
   })
 
   return users.forEach(user => {
-    // let user_id   = user.match(/@(U[A-Za-z0-9\._-]+)/)[1]
     let user_name = user.match(/\|([A-Z0-9\._-]+)>/i)[1]
 
     bot.say({
@@ -157,10 +163,10 @@ slack.on('/group-subscribe', (msg, bot) => {
     .then(() => slack.callback({
       response_type: 'in_channel',
       text: `One of us! One of us! One of us! 🙌🤘🎉`
-    }) )
+    }))
     .catch(err => err.error ? bot.replyPrivate({
       text: `Uh oh - something went wrong: ${err.error}`
-    }) : null )
+    }) : null)
 })
 
 // leave a group
