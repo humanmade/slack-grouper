@@ -9,7 +9,7 @@ exports.handler = slack.handler.bind(slack)
 // create a group
 slack.on('/group-create', (msg, bot) => {
 
-  let handle   = msg.text.match(/@([A-Z0-9_-]+)/)
+  let handle   = msg.text.match(/@([A-Z0-9_-]+)/i)
   let name     = msg.text.match(/\s([^#@][^#@]+)/)
 
   if ( ! handle ) {
@@ -35,7 +35,7 @@ slack.on('/group-create', (msg, bot) => {
 // invite people to a group
 slack.on('/group-invite', (msg, bot) => {
 
-  let usergroup = msg.text.match(/subteam\^([A-Z0-9_-]+)(?:\|(@[A-Za-z0-9\._-]+))?/)
+  let usergroup = msg.text.match(/subteam\^([A-Z0-9_-]+)(?:\|(@[A-Z0-9\._-]+))?/i)
 
   if ( ! usergroup ) {
     return bot.replyPrivate({
@@ -43,7 +43,7 @@ slack.on('/group-invite', (msg, bot) => {
     })
   }
 
-  let users = msg.text.match(/<@(U[A-Z0-9_-]+)(?:\|([A-Za-z0-9_-]+))?>/g)
+  let users = msg.text.match(/<@(U[A-Z0-9_-]+)(?:\|([A-Z0-9_-]+))?>/gi)
 
   if ( ! users ) {
     return bot.replyPrivate({
@@ -57,7 +57,7 @@ slack.on('/group-invite', (msg, bot) => {
 
   return users.forEach(user => {
     // let user_id   = user.match(/@(U[A-Za-z0-9\._-]+)/)[1]
-    let user_name = user.match(/\|([A-Za-z0-9\._-]+)>/)[1]
+    let user_name = user.match(/\|([A-Z0-9\._-]+)>/i)[1]
 
     bot.say({
       channel: `@${user_name}`,
@@ -139,7 +139,7 @@ slack.on('grouper_invite', (msg, bot) => {
 // join a group
 slack.on('/group-subscribe', (msg, bot) => {
 
-  let usergroup = msg.text.match(/subteam\^([A-Z0-9_-]+)/)
+  let usergroup = msg.text.match(/subteam\^([A-Z0-9_-]+)/i)
 
   if ( ! usergroup ) {
     return bot.replyPrivate({
@@ -166,7 +166,7 @@ slack.on('/group-subscribe', (msg, bot) => {
 // leave a group
 slack.on('/group-unsubscribe', (msg, bot) => {
 
-  let usergroup = msg.text.match(/subteam\^([A-Z0-9_-]+)/)
+  let usergroup = msg.text.match(/subteam\^([A-Z0-9_-]+)/i)
 
   if ( ! usergroup ) {
     return bot.replyPrivate({
@@ -212,8 +212,8 @@ slack.on('/group-list', (msg, bot) => {
     .then(data => {
 
       let usergroups = data.usergroups
-      let usergroup  = search.match(/subteam\^([A-Z0-9_-]+)/)
-      let user       = search.match(/@(U[A-Z0-9_-]+)/)
+      let usergroup  = search.match(/subteam\^([A-Z0-9_-]+)/i)
+      let user       = search.match(/@(U[A-Z0-9_-]+)/i)
       let title      = `👥 Available user groups`
       let fields     = [ {
         title: `No results found`,
